@@ -1,4 +1,4 @@
-
+# Examen parcial
 
 ## Configuración de variables de entorno para el sistema:
 * `DJANGO_SETTINGS_MODULE=config.settings.dev`
@@ -8,6 +8,10 @@
 * `DB_HOST` servidor de base de datos
 * `DB_PORT` puerto de la base de datos
 * `SECRET_KEY` Secret Key de Django
+* `RABBIT_HOST`
+* `RABBIT_VIRTUAL_HOST`
+* `RABBIT_USERNAME`
+* `RABBIT_PASSWORD`
 
 ## Patrones agregados:
 
@@ -38,11 +42,10 @@ class NombreCliente(ValueObject):
 from typing import NamedTuple
 
 
-class CrearClienteProyectoUsuarioDto(NamedTuple):
-    NombreCliente: str
-    NombreProyecto: str
-    NombreUsuario: str
-    Rol: int = None
+class CrearClienteDto(NamedTuple):
+    nombre_cliente: str
+    telefono_tipo: int
+    telefono_numero: int
 
     def serialize(self):
         return self._asdict()
@@ -83,7 +86,7 @@ class NombreCliente(ValueObject):
         try:
             return Result.ok(cls(nombre))
         except Exception as ex:
-            return Result.fail({'NombreCliente':  [str(ex)]})
+            return Result.fail({'nombre_cliente':  [str(ex)]})
 ```
 
 - `repository` ejem `apps/clientes/repositorio_cliente.py`
@@ -104,20 +107,72 @@ class RepositorioCliente(object):
     def create(self, cliente):
         try:
             db_cliente = ORMCliente.objects.create(nombre=cliente.nombre.value)
+            return self._decode_db(db_cliente)
         except Exception as ex:
             raise ValueError(str(ex))
-        return self._decode_db(db_cliente)
+
 ```
 
-- url de prueba `https://examendcroh.cfapps.io/api/v1/clientes` 
+
+- Enviar a Cola rabbit
+```python
+import os
+import pika
+
+
+def send_rabit(mensaje):
+    connection = pika.BlockingConnection(
+        pika.ConnectionParameters(
+            host=os.environ.get('RABBIT_HOST'),
+            virtual_host=os.environ.get('RABBIT_VIRTUAL_HOST'),
+            credentials=pika.PlainCredentials(username=os.environ.get('RABBIT_USERNAME'),
+                                              password=os.environ.get('RABBIT_PASSWORD'))))
+    channel = connection.channel()
+
+    channel.queue_declare(queue='test')
+
+    channel.basic_publish(exchange='',
+                          routing_key='test',
+                          body=mensaje)
+    connection.close()
+```
+
+- Null object pattern
+
+```python
+
+class Null:
+
+    def __init__(self, *args, **kwargs):
+        pass
+
+    def __call__(self, *args, **kwargs):
+        return self
+
+    def __repr__(self):
+        return "Null(  )"
+
+    def __nonzero__(self):
+        return 0
+
+    def __getattr__(self, name):
+        return self
+
+    def __setattr__(self, name, value):
+        return self
+
+    def __delattr__(self, name):
+        return self
+```
+
+- url de prueba `https://examenparcialdcroh.cfapps.io/api/v1/clientes` 
 - Method: `POST`
 - data de prueba
 ```python
 {
-	"NombreCliente": "Test",
-	"NombreProyecto": "Proyecto 1",
-	"NombreUsuario": "test",
-	"Presupuesto": 1000
+	"nombre_cliente": "Test",
+	"telefono_numero": 989898981,
+	"telefono_tipo": 1,
 }
 
 ```
