@@ -13,6 +13,7 @@ class RepositorioCliente(object):
     def create(self, cliente):
         try:
             db_cliente = ORMCliente.objects.create(nombre=cliente.nombre.value)
+            return self._decode_db(db_cliente)
         except Exception as ex:
             raise ValueError(str(ex))
-        return self._decode_db(db_cliente)
+

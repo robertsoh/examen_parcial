@@ -16,4 +16,4 @@ class NombreCliente(ValueObject):
         try:
             return Result.ok(cls(nombre))
         except Exception as ex:
-            return Result.fail({'NombreCliente':  [str(ex)]})
+            return Result.fail({'nombre_cliente':  [str(ex)]})
