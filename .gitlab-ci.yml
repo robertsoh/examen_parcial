@@ -1,0 +1,24 @@
+image: python:3.5
+services:
+  - postgres
+
+lint:
+  stage: test
+  script:
+    - pip install -r requirements/test.txt
+    - flake8 .
+    - isort -c
+
+test:
+  stage: test
+  script:
+    - pip install -r requirements/test.txt
+    - export DJANGO_SETTINGS_MODULE=config.settings.test
+    - export SECRET_KEY=secret
+    - export DB_HOST=postgres
+    - export DB_NAME=postgres
+    - export DB_USER=postgres
+    - export DB_PASSWORD=postgres
+    - export DB_PORT=5432
+    - pip install pytest-django pytest-coverage
+    - pytest --cov
